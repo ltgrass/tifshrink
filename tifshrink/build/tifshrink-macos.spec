@@ -4,8 +4,8 @@
 构建: bash tifshrink/build/build_macos.sh
 产物: dist/影像压缩工具.app  (onedir 形式, 再压缩成 zip 交付)
 
-只依赖 rasterio + numpy + tkinter: 不 import ricefert/rsbatch, 因此
-PyInstaller 不会把 sklearn/pandas 拖进来 (那是体积从 ~80MB 涨到 300MB 的原因)。
+只依赖 rasterio + numpy + tkinter: 不 import sklearn/pandas 等重依赖, 因此
+PyInstaller 不会把它们拖进来 (那是体积从 ~80MB 涨到 300MB 的原因)。
 """
 import os
 
@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
 ENTRY = os.path.join(ROOT, "tifshrink", "launch_gui.py")
 
 # rasterio 自带的 proj_data / gdal_data 必须一起打包, 否则按 EPSG 构造 CRS 会报
-# "EPSG code is unknown" (与服务端 rsbatch/projfix.py 修的是同一个坑)。
+# "EPSG code is unknown"。
 # 这里**只收数据目录**: rasterio 包里还有个 .dylibs/ (约 40MB, GDAL 在其中),
 # 用 collect_data_files("rasterio") 不加 includes 会把 .dylibs/* 与 *.so 也当数据收进
 # Resources/, 同时 collect_dynamic_libs 又把它们收进 Frameworks/ —— 同一份 GDAL 存两遍,
@@ -49,7 +49,7 @@ a = Analysis(
         "tkinter", "tkinter.filedialog", "tkinter.messagebox", "tkinter.ttk"],
     hookspath=[],
     runtime_hooks=[],
-    excludes=["ricefert", "rsbatch", "matplotlib", "pandas", "sklearn", "scipy", "pytest"],
+    excludes=["matplotlib", "pandas", "sklearn", "scipy", "pytest"],
     noarchive=False,
 )
 

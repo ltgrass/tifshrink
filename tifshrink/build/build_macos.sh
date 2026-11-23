@@ -33,14 +33,10 @@ echo "== 打包自检 (用包内的 CLI 真跑一次, 不弹窗) =="
 CHECK="$OUT/_selfcheck"
 mkdir -p "$CHECK"
 python - "$CHECK" <<'PYCODE'
-import importlib.util
 import sys
-if importlib.util.find_spec("rsbatch") is not None:
-    import rsbatch                 # 主仓: 借其导入期的 projfix (本机 conda PROJ 会串味)
-else:                              # 独立仓: 没有 rsbatch, 用 tests/_projfix.py 的等价实现
-    sys.path.insert(0, "tifshrink/tests")
-    import _projfix
-    _projfix.ensure_proj_data()
+sys.path.insert(0, "tifshrink/tests")
+import _projfix
+_projfix.ensure_proj_data()        # 本机 conda 的 PROJ 可能串味, 先修正再 import rasterio
 import numpy as np
 import rasterio
 from rasterio.transform import from_origin

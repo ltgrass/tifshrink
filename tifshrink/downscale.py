@@ -5,7 +5,7 @@
   * 先写 <dst>.partial, 成功后 os.replace 成 <dst> —— 取消/失败时绝不留下一个
     看起来正常、实际不完整的输出文件; 也绝不删除任何文件 (含 .partial)。
   * nodata 像元不参与平均; 完全无效的输出像元写 nodata。
-  * 输出保持源 dtype, 均值显式 rint 后再落盘 (量化 <= 0.5 DN, 见设计文档 §4.6)。
+  * 输出保持源 dtype, 均值显式 rint 后再落盘 (量化 <= 0.5 DN)。
 """
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ def downscale(src, dst, target_m: float, *, progress=None, cancel=None,
             with d:
                 writer.apply_band_metadata(d, meta)
                 nodata = meta.nodata if meta.nodata is not None else 0.0
-                # 掩膜语义必须与服务端一致(由 nodata 决定, 见 NodataShadowWarning 的含义),
+                # 掩膜语义由 nodata 决定 (见 NodataShadowWarning 的含义),
                 # 但该警告每次读掩膜都发一次, 大影像上千个块会把日志刷满 —— 只静默这一个类别。
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", NodataShadowWarning)

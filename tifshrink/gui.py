@@ -59,8 +59,8 @@ def build_hints(meta, plan, uncompressed_bytes: int,
                      f"可把输出分辨率填大一些")
     per_cell = (cell_size_m / plan.out_res) ** 2 if plan.out_res else 0
     if per_cell < C.MIN_SUBPIXELS_PER_CELL:
-        hints.append(f"压缩过狠: 每个 {cell_size_m:g} m 作业单元只剩 {per_cell:.0f} 个像元 "
-                     f"(建议 < {C.MIN_SUBPIXELS_PER_CELL}); 请把输出分辨率填小一些")
+        hints.append(f"压缩过狠: 每个 {cell_size_m:g} m 网格只剩 {per_cell:.0f} 个像元 "
+                     f"(建议 >= {C.MIN_SUBPIXELS_PER_CELL}); 请把输出分辨率填小一些")
     if meta.count < 4:
         hints.append(f"影像只有 {meta.count} 个波段, 缺少 NIR/RE, 压缩后仍无法做真实反演")
     if not meta.overviews:
@@ -72,7 +72,7 @@ def build_hints(meta, plan, uncompressed_bytes: int,
 
 def summary_lines(meta, plan, uncompressed_bytes: int, src_bytes: int | None = None,
                   cell_size_m: float = C.DEFAULT_CELL_SIZE_M) -> list:
-    """信息区文案 (原始 / 输出 / 每像元细像元数 / 每作业单元像元数)"""
+    """信息区文案 (原始 / 输出 / 每像元细像元数 / 每参考网格像元数)"""
     per_cell = (cell_size_m / plan.out_res) ** 2 if plan.out_res else 0
     original = f"原始：{meta.res_x * 1000:.2f} mm · {meta.width}×{meta.height}"
     if src_bytes:
@@ -83,7 +83,7 @@ def summary_lines(meta, plan, uncompressed_bytes: int, src_bytes: int | None = N
         f"输出：{plan.out_res:.4f} m · {plan.out_width}×{plan.out_height} · "
         f"预计 ≤ {format_bytes(uncompressed_bytes)}（实测通常再小 1.5~2.5 倍）",
         f"       每个输出像元由 {plan.sub_pixels} 个细像元均值得到",
-        f"       每个 {cell_size_m:g} m 作业单元含 {per_cell:.0f} 个像元",
+        f"       每个 {cell_size_m:g} m 网格含 {per_cell:.0f} 个输出像元",
     ]
 
 
@@ -110,7 +110,7 @@ class App:
         self.cancel_event = threading.Event()
         self.worker: threading.Thread | None = None
 
-        root.title("施肥系统 · 影像压缩工具")
+        root.title("影像压缩工具")
         root.minsize(620, 340)
         self._build()
         self._refresh()
@@ -135,7 +135,7 @@ class App:
         row1 = ttk.Frame(frm)
         row1.grid(row=1, column=1, columnspan=2, sticky="ew", **pad)
         ttk.Entry(row1, textvariable=self.target_var, width=10).pack(side="left")
-        ttk.Label(row1, text=f"米   （作业尺度 {C.DEFAULT_CELL_SIZE_M:g} m）").pack(side="left")
+        ttk.Label(row1, text=f"米   （参考网格 {C.DEFAULT_CELL_SIZE_M:g} m）").pack(side="left")
 
         self.info = ttk.Label(frm, text="", justify="left", foreground="#333")
         self.info.grid(row=2, column=0, columnspan=3, sticky="w", **pad)
@@ -278,7 +278,7 @@ class App:
                             f"{res['out_width']}×{res['out_height']} 像元, "
                             f"分辨率 {res['out_res']} m\n"
                             f"体积 {format_bytes(res['bytes_out'])}\n\n"
-                            "请把这个文件上传到 OBS，再把地址填进追肥推荐接口。")
+                            "工具只做压缩、不上传：请自行把生成的文件上传到你的存储服务。")
 
     def _on_error(self, code: str, message: str):
         self._reset_buttons()

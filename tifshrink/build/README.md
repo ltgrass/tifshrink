@@ -18,7 +18,7 @@ bash tifshrink/build/build_macos.sh
 
 - onedir（而非 onefile）形式：GDAL 的动态库在 onefile 下解压到临时目录容易出问题。
 - **未做开发者签名**：用户首次打开需「右键 → 打开」（用户已确认接受此方式），`交付说明.txt` 里写了这一步。
-- 打包会显式排除 `ricefert`/`rsbatch`/`sklearn`/`pandas`/`matplotlib`，这是包体积能保持在几十 MB 的关键。
+- 打包会显式排除 `sklearn`/`pandas`/`matplotlib`/`scipy`，这是包体积能保持在几十 MB 的关键。
 
 ## Windows
 

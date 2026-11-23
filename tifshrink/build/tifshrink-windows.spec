@@ -39,7 +39,7 @@ gui = Analysis(
                    "rasterio.env", "rasterio.errors", "rasterio.path",
                    "rasterio.profiles", "rasterio.rpc", "rasterio.sample",
                    "rasterio.transform", "rasterio.vrt", "rasterio.windows"],
-    excludes=["ricefert", "rsbatch", "matplotlib", "pandas", "sklearn", "scipy", "pytest"],
+    excludes=["matplotlib", "pandas", "sklearn", "scipy", "pytest"],
     noarchive=False,
 )
 # 注意: 不要给 EXE 传 onefile=True —— PyInstaller 的单文件形式由"把 binaries/datas
@@ -66,8 +66,7 @@ cli = Analysis(
                    "rasterio.env", "rasterio.errors", "rasterio.path",
                    "rasterio.profiles", "rasterio.rpc", "rasterio.sample",
                    "rasterio.transform", "rasterio.vrt", "rasterio.windows"],
-    excludes=["ricefert", "rsbatch", "matplotlib", "pandas", "sklearn", "scipy",
-              "pytest", "tkinter"],
+    excludes=["matplotlib", "pandas", "sklearn", "scipy", "pytest", "tkinter"],
     noarchive=False,
 )
 cli_pyz = PYZ(cli.pure)

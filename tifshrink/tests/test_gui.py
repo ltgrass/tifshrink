@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """界面纯函数: 输出路径、体积文案、提示文案
 
-tkinter 窗口本身不写自动化测试(脆弱), 由人工验收 (计划 Task 6 Step 5):
+tkinter 窗口本身不写自动化测试(脆弱), 由人工验收:
 可测的是全部"算出来的东西" —— 这里覆盖。
 """
 from pathlib import Path
@@ -37,7 +37,7 @@ def test_hints_flag_oversized_output():
 def test_hints_flag_too_coarse_for_cell_size():
     meta = _meta()
     plan = core.plan_downscale(meta, 8.0)
-    assert any("作业单元" in h for h in gui.build_hints(meta, plan, 1))
+    assert any("网格" in h for h in gui.build_hints(meta, plan, 1))
 
 
 def test_hints_flag_fewer_than_four_bands():
@@ -59,7 +59,7 @@ def test_hints_empty_for_healthy_case():
 
 
 def test_hints_surface_plan_notes():
-    """源层因像元上限退化时必须在界面说明原因 (spec §4.2 step 4)"""
+    """源层因像元上限退化时必须在界面说明原因"""
     meta = _meta()
     plan = core.plan_downscale(meta, 0.5, sub_pixels_source_max=10_000_000)
     assert plan.notes
@@ -68,7 +68,7 @@ def test_hints_surface_plan_notes():
 
 
 def test_hints_no_overview_includes_time_estimate():
-    """无概览的退化路径必须给耗时预估, 不能只说"较长" (spec §3.1 提示④)"""
+    """无概览的退化路径必须给耗时预估, 不能只说「较长」"""
     meta = _meta(width=40000, height=40000, overviews=())
     plan = core.plan_downscale(meta, 0.5)
     hints = gui.build_hints(meta, plan, 1024)

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""tifshrink.compare - 处方图对齐与偏差统计 (供数值对照实验与测试复用)
+"""tifshrink.compare - 两幅栅格的对齐与偏差统计 (供对照实验与测试复用)
 
-只依赖 rasterio/numpy, 不 import ricefert/rsbatch (工具本体的依赖纪律)。
-两组实验的作业单元边长可能因 factor 取整而不同 (例如 10.19 m 与 9.91 m),
-比较前必须重采样到同一网格, 否则逐单元比较没有意义。
+只依赖 rasterio/numpy (工具本体的依赖纪律)。
+两幅栅格的像元边长可能因 factor 取整而不同 (例如 10.19 m 与 9.91 m),
+比较前必须重采样到同一网格, 否则逐像元比较没有意义。
 """
 from __future__ import annotations
 

@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
-"""块式盒均值: 必须与 rsbatch.raster.RasterSource.aggregate 逐点一致
-
-两条链路(服务端自跑 / 工具压缩后服务端再跑)的数值口径就靠这条断言锁住。
-
-独立性说明: 独立仓 (ltgrass/tifshrink) 里没有 rsbatch, 只有这一条一致性断言会
-skip; 护栏本身在主仓 (rice-fert-engine) 全量运行。
-"""
+"""块式盒均值: 运算顺序、nodata 语义与恒等性"""
 import numpy as np
 import pytest
 
 from tifshrink.aggregate import aggregate_box
 
 
-def test_matches_rsbatch_aggregate_pointwise():
-    RasterSource = pytest.importorskip(
-        "rsbatch.raster", reason="仅主仓可跑: 需要 rsbatch 的参考实现").RasterSource
+def test_matches_explicit_block_mean_on_uint16():
+    """与"先转 float64 再相加、最后除以有效个数"逐点等价
+
+    这条锁住运算顺序本身: 若改成在源 dtype 里累加, uint16 大块会溢出;
+    若先做整数除法, 结果会被截断。
+    """
     rng = np.random.default_rng(0)
-    values = rng.random((64, 96), dtype=np.float32)
+    values = rng.integers(0, 65535, (64, 96)).astype(np.uint16)
     valid = rng.random((64, 96)) > 0.3
-    mine = aggregate_box(values, valid, 8)
-    theirs = RasterSource.aggregate(values, valid, 8)
-    for a, b in zip(mine, theirs):
-        np.testing.assert_allclose(a, b, rtol=0, atol=0, equal_nan=True)
+    mean, ratio = aggregate_box(values, valid, 8)
+    for i in range(0, 64, 8):
+        for j in range(0, 96, 8):
+            block = values[i:i + 8, j:j + 8].astype(np.float64)
+            m = valid[i:i + 8, j:j + 8]
+            assert mean[i // 8, j // 8] == pytest.approx(block[m].mean(), rel=1e-6)
+            assert ratio[i // 8, j // 8] == pytest.approx(float(m.mean()))
 
 
 def test_nodata_pixels_are_excluded_from_mean():
@@ -42,3 +42,9 @@ def test_factor_one_is_identity():
     valid = np.ones((2, 3), bool)
     mean, ratio = aggregate_box(values, valid, 1)
     np.testing.assert_array_equal(mean, values)
+
+
+def test_block_smaller_than_factor_returns_empty():
+    """块比合并因子还小时返回空数组, 调用方据此跳过, 而不是崩在 reshape 上"""
+    mean, ratio = aggregate_box(np.zeros((3, 3), np.float32), np.ones((3, 3), bool), 4)
+    assert mean.shape == (0, 0) and ratio.shape == (0, 0)

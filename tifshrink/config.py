@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""tifshrink 策略常量 (取值依据见设计文档 §3/§4)
-
-设计文档: docs/superpowers/specs/2026-10-30-tif-downscale-tool-design.md
+"""tifshrink 策略常量 (取值依据见 README「工作原理」)
 """
 from __future__ import annotations
 
@@ -23,8 +21,8 @@ DEFLATE_LEVEL = 6
 # 界面提示阈值
 # ---------------------------------------------------------------------------
 WARN_UNCOMPRESSED_MB = 100.0    # 未压缩预估超过此值即提示"可能不好传"
-DEFAULT_CELL_SIZE_M = 10.0      # 仅用于界面提示"每个作业单元含多少像元"; 对齐服务端默认 cell_size_m
-MIN_SUBPIXELS_PER_CELL = 100    # 每个作业单元含细像元数低于此值即提示"压缩过狠"
+DEFAULT_CELL_SIZE_M = 10.0      # 参考网格边长(米): 仅用于界面提示"每个网格含多少输出像元"
+MIN_SUBPIXELS_PER_CELL = 100    # 每个参考网格含输出像元数低于此值即提示"压缩过狠"
 
 # ---------------------------------------------------------------------------
 # dtype 字节宽度 (体积预估用)

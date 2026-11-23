@@ -33,8 +33,7 @@ a = Analysis(
                    "rasterio.transform", "rasterio.vrt", "rasterio.windows"],
     hookspath=[],
     runtime_hooks=[],
-    excludes=["ricefert", "rsbatch", "matplotlib", "pandas", "sklearn", "scipy",
-              "pytest", "tkinter"],
+    excludes=["matplotlib", "pandas", "sklearn", "scipy", "pytest", "tkinter"],
     noarchive=False,
 )
 # 不要滤掉 rasterio hook 收进来的 .dylibs (见 macos spec 的说明: @rpath 需要它们)

@@ -4,7 +4,7 @@
 两件事必须做对, 否则下游静默出错:
   * transform 用**未四舍五入**的 out_res 计算, 避免累计漂移;
   * descriptions 与 colorinterp 逐波段复制 —— rasterio 的 profile 不携带它们,
-    而服务端 rsbatch.raster.detect_band_map() 正是靠这两项识别 nir/re/red/green。
+    而下游处理链路正是靠这两项识别 nir/re/red/green。
 """
 from __future__ import annotations
 

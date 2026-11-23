@@ -2,13 +2,15 @@
 """降尺度规划: 选层、因子、输出网格与拒绝规则"""
 from pathlib import Path
 
+import numpy as np
 import pytest
+import rasterio
+from rasterio.transform import from_origin
 
 from tifshrink import core
 from tifshrink.core import RasterMeta, TifShrinkError
 
-ROOT = Path(__file__).resolve().parents[2]
-DOM_RES = 0.004423748950957508          # 实测: /Users/.../拼接影像/DOM.tif 的 res[0]
+DOM_RES = 0.004423748950957508          # 实测: 一幅 6.7 万×9 万像元正射影像的 res[0]
 
 
 def _meta(**kw):
@@ -20,7 +22,7 @@ def _meta(**kw):
     return RasterMeta(**base)
 
 
-def test_plan_matches_spec_default_for_dom_like_meta():
+def test_plan_matches_default_for_large_ortho_meta():
     p = core.plan_downscale(_meta(), 0.5)
     assert (p.source_level, p.factor, round(p.out_res, 4)) == (16, 7, 0.4955)
     assert (p.out_width, p.out_height) == (597, 806)
@@ -71,13 +73,18 @@ def test_plan_handles_single_band_gray_source():
     assert p.out_width == 597                       # 波段数不参与规划
 
 
-@pytest.mark.skipif(not (ROOT / "data/mock/mock_ms_5000_5cm.tif").exists(),
-                    reason="示例影像只在主仓 (独立仓不含 data/mock)")
-def test_read_meta_reads_real_mock_image():
-    m = core.read_meta(ROOT / "data/mock/mock_ms_5000_5cm.tif")
+def test_read_meta_reads_multiband_geotiff_without_overviews(tmp_path):
+    """真实文件路径: 读得回波段数/dtype/分辨率/波段描述, 且无概览时报空"""
+    p = tmp_path / "ms.tif"
+    with rasterio.open(p, "w", driver="GTiff", width=500, height=500, count=4,
+                       dtype="uint16", nodata=0, crs="EPSG:32652",
+                       transform=from_origin(500000, 5000000, 0.05, 0.05)) as d:
+        d.write(np.full((4, 500, 500), 1000, dtype="uint16"))
+        d.descriptions = ("NIR", "RedEdge", "Red", "Green")
+    m = core.read_meta(p)
     assert (m.count, m.dtype, m.overviews) == (4, "uint16", ())
     assert round(m.res_x, 3) == 0.05
-    assert m.descriptions[0] == "NIR(mock)"
+    assert m.descriptions[0] == "NIR"
 
 
 def test_read_meta_raises_open_failed(tmp_path):

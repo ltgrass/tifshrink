@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """tifshrink.aggregate - 块式盒均值 (k x k 非重叠平均, nodata 不参与)
 
-与 rsbatch/raster.py 的 RasterSource.aggregate 是**同一套数学**: 运算顺序
-(reshape -> sum(axis=(1,3), float64) -> 除以有效像元数) 刻意保持一致,
-tifshrink/tests/test_aggregate.py 用逐点相等断言锁住, 防止两条链路日后各自漂移。
+运算顺序 (reshape -> sum(axis=(1,3), float64) -> 除以有效像元数) 是刻意固定的:
+先在 float64 里累加再相除, 大批量 uint16 累加不会溢出, 也不会被整数除法截断;
+结果与"逐像元相加后除以有效个数"逐点等价, 由 tests/test_aggregate.py 锁住。
 """
 from __future__ import annotations
 
