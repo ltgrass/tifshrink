@@ -1,0 +1,19 @@
+# PyInstaller 产物与中间目录 (tifshrink/build/ 是源码, 必须保持纳入版本管理)
+/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+
+# 取消/失败时保留的半成品 (按设计不自动删除)
+*.partial
+
+# macOS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp

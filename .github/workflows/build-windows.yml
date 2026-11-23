@@ -1,0 +1,104 @@
+name: build-windows
+
+# 触发方式
+#   workflow_dispatch   —— 日常出包 (Actions 页面点 "Run workflow")
+#   push main / PR      —— 只验证, 防止改坏打包链路
+#   push v* tag         —— 出包并附到 GitHub Release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write        # 打 tag 时 gh release create 需要
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # PyInstaller 不能交叉编译, 必须在真 Windows 上跑 —— 这正是本 workflow 存在的理由
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装构建依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tifshrink/build/requirements-build.txt
+
+      - name: 单元测试 (打包前先钉住入口契约与数值口径)
+        run: pytest tifshrink/tests -q
+
+      - name: 打包 (onefile: GUI + CLI)
+        run: >
+          pyinstaller --noconfirm --distpath dist --workpath dist/_work
+          tifshrink/build/tifshrink-windows.spec
+
+      # 只测 exe 能启动是不够的: 工具写盘时 writer.write_profile() 会把
+      # crs="EPSG:32652" 交给 rasterio, 这一步才真正用到打包进去的 proj_data。
+      # 所以这里用打出来的 CLI 真压一张测试图, 并断言输出分辨率。
+      - name: 冻结环境自检 (用打出来的 exe 真压一张 EPSG:32652 测试图)
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/_selfcheck | Out-Null
+          @'
+          import numpy as np
+          import rasterio
+          from rasterio.transform import from_origin
+
+          p = "dist/_selfcheck/in.tif"
+          with rasterio.open(p, "w", driver="GTiff", width=400, height=400, count=4,
+                             dtype="uint16", nodata=0, crs="EPSG:32652",
+                             transform=from_origin(500000, 5000000, 0.05, 0.05)) as d:
+              d.write(np.full((4, 400, 400), 1000, dtype="uint16"))
+              d.descriptions = ("NIR(mock)", "RedEdge(mock)", "Red", "Green")
+          print("测试图已生成:", p)
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw "测试图生成失败" }
+
+          $out = & ".\dist\tifshrink-cli.exe" ".\dist\_selfcheck\in.tif" `
+                   --target 0.5 --out ".\dist\_selfcheck\out.tif" --json | Out-String
+          if ($LASTEXITCODE -ne 0) { throw "自检失败: tifshrink-cli.exe 退出码 $LASTEXITCODE`n$out" }
+          if (-not (Test-Path ".\dist\_selfcheck\out.tif")) { throw "自检失败: 未生成输出文件" }
+          $r = $out | ConvertFrom-Json
+          if ([math]::Abs([double]$r.out_res - 0.5) -gt 1e-9) {
+              throw "自检失败: out_res=$($r.out_res), 期望 0.5"
+          }
+          Write-Host "自检通过: 冻结环境可用 (GDAL / proj_data / rasterio), out_res=$($r.out_res)"
+
+      # 7z 写 ZIP 时带 UTF-8 语言编码标记, 内层中文名 (影像压缩工具.exe) 才不会乱码;
+      # Compress-Archive 在这点上有坑。zip 本身用 ASCII 名, 便于上传与转发。
+      - name: 打交付 zip
+        run: |
+          7z a -tzip -mx=9 "dist\tifshrink-windows.zip" `
+            "dist\影像压缩工具.exe" "dist\tifshrink-cli.exe" "tifshrink\build\交付说明.txt"
+          if ($LASTEXITCODE -ne 0) { throw "7z 打包失败" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tifshrink-windows-x64
+          path: |
+            dist/影像压缩工具.exe
+            dist/tifshrink-cli.exe
+            dist/tifshrink-windows.zip
+          if-no-files-found: error
+
+      - name: 发布 Release (仅 tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$env:GITHUB_REF_NAME" `
+            --title "$env:GITHUB_REF_NAME" --generate-notes `
+            "dist\tifshrink-windows.zip" `
+          || gh release upload "$env:GITHUB_REF_NAME" "dist\tifshrink-windows.zip" --clobber
