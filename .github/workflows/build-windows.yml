@@ -40,7 +40,7 @@ jobs:
       - name: 单元测试 (打包前先钉住入口契约与数值口径)
         run: pytest tifshrink/tests -q
 
-      - name: 打包 (onefile: GUI + CLI)
+      - name: "打包 (onefile: GUI + CLI)"
         run: >
           pyinstaller --noconfirm --distpath dist --workpath dist/_work
           tifshrink/build/tifshrink-windows.spec
