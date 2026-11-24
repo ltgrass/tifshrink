@@ -56,7 +56,14 @@ def main(argv: list | None = None) -> int:
 
     print("", file=sys.stderr)
     if args.json:
-        print(json.dumps(res, ensure_ascii=False))
+        # Windows 下 stdout 若是管道/重定向, 默认按本地代码页 (cp1252 等) 编码;
+        # 结果里的 notes 含中文, 直接输出会 UnicodeEncodeError —— 在 CI 里表现为
+        # "自检失败", 把成功当成了崩溃。优先输出可读的 UTF-8, 编码器不支持时退回
+        # \uXXXX 转义 (仍是合法 JSON, 机器消费无差别)。
+        try:
+            print(json.dumps(res, ensure_ascii=False))
+        except UnicodeEncodeError:
+            print(json.dumps(res, ensure_ascii=True))
     else:
         mb = res["bytes_out"] / 1048576
         print(f"完成: {res['dst']}")

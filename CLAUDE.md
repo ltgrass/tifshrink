@@ -112,6 +112,9 @@ core.read_meta ─► core.plan_downscale ─► downscale.downscale（分块）
    `影像压缩工具.exe` 显示成乱码；`Compress-Archive` 在这点上有坑。
 3. **onefile 首次启动慢**：会解压到临时目录，属正常现象。
 4. **不要加并行读取**：单幅影像按块串行处理，性能靠概览层控制；并行会与进度/取消逻辑纠缠。
+5. **Windows CI 的 stdout 编码**：GitHub runner 上 Python 的 stdout 是 cp1252（不是 UTF-8），
+   往 stdout 打印中文会 `UnicodeEncodeError`。因此自检脚本只输出 ASCII；CLI 的 `--json`
+   在编码失败时退回 `ensure_ascii=True`（合法 JSON，`\uXXXX` 转义不影响机器消费）。
 
 ## 发布流程
 

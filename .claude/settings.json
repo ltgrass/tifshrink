@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync)",
+      "Bash(uv lock)",
+      "Bash(uv run:*)",
+      "Bash(uv pip list:*)",
+      "Bash(python -m scripts.check_memory:*)",
+      "Bash(redis-cli:*)",
+      "Bash",
+      "Agent",
+      "WebSearch"
+    ]
+  }
+}

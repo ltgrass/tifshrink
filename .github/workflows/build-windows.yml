@@ -62,7 +62,7 @@ jobs:
                              transform=from_origin(500000, 5000000, 0.05, 0.05)) as d:
               d.write(np.full((4, 400, 400), 1000, dtype="uint16"))
               d.descriptions = ("NIR(mock)", "RedEdge(mock)", "Red", "Green")
-          print("测试图已生成:", p)
+          print("test image written:", p)
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw "测试图生成失败" }
 
