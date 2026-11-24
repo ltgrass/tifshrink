@@ -120,10 +120,19 @@ def test_float_dtype_values_are_not_quantized(tmp_path):
 def test_mask_reading_emits_no_warnings(tmp_path):
     """4 波段 uint8 会被 GDAL 当作 RGBA, nodata 与 alpha 并存时 rasterio 每次读掩膜
     都发 NodataShadowWarning —— 掩膜语义本身必须与服务端一致(由 nodata 决定), 但
-    大影像上千个块会把日志刷满, 因此就地静默这一个警告类别"""
+    大影像上千个块会把日志刷满, 因此就地静默这一个警告类别。
+
+    只把"NodataShadowWarning 必须被就地静默"这一条升级为错误;
+    不能用 simplefilter("error") 通杀 —— 依赖库的无关警告会随版本漂移
+    (CI 装最新 rasterio, 本机是旧版), 那样就把本用例变成了"依赖库不许发任何
+    警告"的脆弱断言; 而 PendingDeprecationWarning 这类警告默认过滤下在生产里
+    根本不显示。
+    """
+    from rasterio.errors import NodataShadowWarning
+
     src = _make_src(tmp_path, size=2000, dtype="uint8", fill=100)
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
+        warnings.simplefilter("error", NodataShadowWarning)
         downscale.downscale(src, tmp_path / "out.tif", 0.5)
 
 
