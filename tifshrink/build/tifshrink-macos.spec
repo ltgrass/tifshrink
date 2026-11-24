@@ -27,6 +27,8 @@ binaries = collect_dynamic_libs("rasterio")
 # 漏一个冻结后就报 ModuleNotFoundError (实测依次漏过 sample, vrt, _features)。
 # 这份清单是扫描 rasterio/*.so 里全部 "rasterio.<name>" 字面引用得到的并集;
 # 刻意不含 rio/plot/stack/tools (会拖进 click 与 matplotlib)。
+# 1.4.4 起 _base.pyx 又新增了 rasterio.serde; 清单与 requirements-build.txt
+# 的 rasterio==1.4.4 绑定, 升级 rasterio 前必须重新扫描。
 RASTERIO_SUBMODULES = [
     "rasterio._base", "rasterio._env", "rasterio._err", "rasterio._example",
     "rasterio._features", "rasterio._filepath", "rasterio._fill", "rasterio._io",
@@ -34,8 +36,8 @@ RASTERIO_SUBMODULES = [
     "rasterio._vsiopener", "rasterio._warp", "rasterio.control", "rasterio.coords",
     "rasterio.crs", "rasterio.drivers", "rasterio.dtypes", "rasterio.enums",
     "rasterio.env", "rasterio.errors", "rasterio.path", "rasterio.profiles",
-    "rasterio.rpc", "rasterio.sample", "rasterio.transform", "rasterio.vrt",
-    "rasterio.windows",
+    "rasterio.rpc", "rasterio.sample", "rasterio.serde", "rasterio.transform",
+    "rasterio.vrt", "rasterio.windows",
 ]
 
 a = Analysis(
@@ -44,7 +46,8 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     # rasterio 的 Cython 扩展在 C 层引用这些子模块 (静态分析看不到), 漏一个冻结后就报
-    # ModuleNotFoundError。清单来自扫描 rasterio/*.so 里 "rasterio.<name>" 的字面引用。
+    # ModuleNotFoundError。清单对应 rasterio==1.4.4 的 rasterio/*.pyx 字面引用,
+    # 其中 rasterio.serde 是 1.4.4 新增的 _base.pyx 隐式引用。
     hiddenimports=RASTERIO_SUBMODULES + [
         "tkinter", "tkinter.filedialog", "tkinter.messagebox", "tkinter.ttk"],
     hookspath=[],

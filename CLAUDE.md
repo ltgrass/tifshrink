@@ -78,7 +78,9 @@ core.read_meta ─► core.plan_downscale ─► downscale.downscale（分块）
   漏了会在「按 EPSG 构造 CRS」时报 `EPSG code is unknown`，而影像仍能正常打开 ——
   极具迷惑性（源 CRS 写在 tif 头里，不查库）。
 - `hiddenimports` 里那份 rasterio 子模块清单是扫描 Cython 扩展字面引用得到的并集，
-  漏一个冻结后就 `ModuleNotFoundError`。补 `tkinter.ttk` 之类的新增项也加在这里。
+  漏一个冻结后就 `ModuleNotFoundError`。`requirements-build.txt` 已锁定
+  `rasterio==1.4.4`（该版本起 `_base.pyx` 在 C 层 `import rasterio.serde`），
+  升级 rasterio 时必须同步重扫清单并更新三份 `.spec`。补 `tkinter.ttk` 之类的新增项也加在这里。
 - macOS 用 onedir + `BUNDLE`；Windows 用 onefile（把 `binaries`/`datas` 交给 `EXE`
   即为单文件形式）。**不要**给 `EXE` 传 `onefile=True` —— 没有这个参数。
 - 两个平台的产物都**未签名**，README 里已说明用户首次打开的放行步骤。

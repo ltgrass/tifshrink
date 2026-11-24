@@ -6,7 +6,10 @@
 pyinstaller>=6.0
 
 # 工具的运行期依赖 (与 rsbatch/requirements.txt、主 requirements.txt 保持同一口径)
-rasterio>=1.3
+# 锁定 1.4.4: 该版本起 _base.pyx 在 C 层 import rasterio.serde, PyInstaller 的
+# 静态分析看不到; 它与三份 spec 的 hiddenimports 清单是一一对应的。放开版本后,
+# 上游新增/改名子模块会让冻结产物在运行时再次 ModuleNotFoundError。
+rasterio==1.4.4
 numpy==1.26.4
 
 # 打包前单测 (test_entrypoints.py 在打包前钉住入口契约)

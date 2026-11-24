@@ -16,21 +16,26 @@ ENTRY = os.path.join(ROOT, "tifshrink", "launch_cli.py")
 datas = collect_data_files("rasterio", includes=["proj_data/**", "gdal_data/**"])
 binaries = collect_dynamic_libs("rasterio")
 
+# rasterio 1.4.4 起 _base.pyx 在 C 层 import rasterio.serde; PyInstaller 扫不到
+# 编译扩展里的引用, 漏掉后冻结产物 import rasterio 就报 ModuleNotFoundError。
+# 清单与 requirements-build.txt 的 rasterio==1.4.4 绑定, 升级前必须重扫 .pyx。
+RASTERIO_SUBMODULES = [
+    "rasterio._base", "rasterio._env", "rasterio._err", "rasterio._example",
+    "rasterio._features", "rasterio._filepath", "rasterio._fill", "rasterio._io",
+    "rasterio._path", "rasterio._transform", "rasterio._version",
+    "rasterio._vsiopener", "rasterio._warp", "rasterio.control", "rasterio.coords",
+    "rasterio.crs", "rasterio.drivers", "rasterio.dtypes", "rasterio.enums",
+    "rasterio.env", "rasterio.errors", "rasterio.path", "rasterio.profiles",
+    "rasterio.rpc", "rasterio.sample", "rasterio.serde", "rasterio.transform",
+    "rasterio.vrt", "rasterio.windows",
+]
+
 a = Analysis(
     [ENTRY],
     pathex=[ROOT],
     binaries=binaries,
     datas=datas,
-    # Cython 扩展在 C 层引用这些子模块 (静态分析看不到), 见 macos spec 的说明
-    hiddenimports=["rasterio._base", "rasterio._env", "rasterio._err", "rasterio._example",
-                   "rasterio._features", "rasterio._filepath", "rasterio._fill",
-                   "rasterio._io", "rasterio._path", "rasterio._transform",
-                   "rasterio._version", "rasterio._vsiopener", "rasterio._warp",
-                   "rasterio.control", "rasterio.coords", "rasterio.crs",
-                   "rasterio.drivers", "rasterio.dtypes", "rasterio.enums",
-                   "rasterio.env", "rasterio.errors", "rasterio.path",
-                   "rasterio.profiles", "rasterio.rpc", "rasterio.sample",
-                   "rasterio.transform", "rasterio.vrt", "rasterio.windows"],
+    hiddenimports=RASTERIO_SUBMODULES,
     hookspath=[],
     runtime_hooks=[],
     excludes=["matplotlib", "pandas", "sklearn", "scipy", "pytest", "tkinter"],

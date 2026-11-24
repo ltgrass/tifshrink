@@ -32,7 +32,7 @@ tifshrink\build\build_windows.bat
 产物：`dist\影像压缩工具.exe`、`dist\tifshrink-cli.exe`（onefile）。
 
 - 可执行文件**不能跨平台打包**：macOS 上产不出 Windows exe，反之亦然。
-- 首次构建若报缺模块，把模块名补进 `tifshrink-windows.spec` 的 `hiddenimports`。
+- 构建依赖锁定 `rasterio==1.4.4`；该版本起 `_base.pyx` 在 C 层隐式 `import rasterio.serde`，三份 `.spec` 的 `hiddenimports` 已显式带上。升级 rasterio 前必须重扫 `.pyx` 并同步更新三份 `.spec`。
 - 构建后请跑一次自检：`dist\tifshrink-cli.exe "某影像.tif" --target 0.5 --json`。
 
 ## 为什么同时打包一个 CLI

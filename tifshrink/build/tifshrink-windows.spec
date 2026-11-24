@@ -11,7 +11,8 @@ CI: 独立仓 ltgrass/tifshrink 的 .github/workflows/build-windows.yml 在
 产物: dist\\影像压缩工具.exe  (单文件, 双击即用)
       dist\\tifshrink-cli.exe (命令行版, 售后排障)
 注意: 本规格是照 macOS 实测经验写的, Windows 上首次构建如报缺模块, 把缺失的模块名
-      加进 hiddenimports 即可 —— 常见的是 tkinter 的 ttk。
+      加进 hiddenimports 即可 —— 常见的是 tkinter 的 ttk。rasterio 版本已在
+      requirements-build.txt 锁定, 升级 rasterio 时必须同步重扫 hiddenimports。
 """
 import os
 
@@ -24,21 +25,28 @@ ENTRY_CLI = os.path.join(ROOT, "tifshrink", "launch_cli.py")
 datas = collect_data_files("rasterio", includes=["proj_data/**", "gdal_data/**"])
 binaries = collect_dynamic_libs("rasterio")
 
+# rasterio 1.4.4 起 _base.pyx 在 C 层执行 from rasterio.serde import to_json。
+# PyInstaller 看不到编译扩展里的引用, 漏掉后冻结产物 import rasterio 就报
+# ModuleNotFoundError: No module named 'rasterio.serde'。清单对应该版本
+# rasterio/*.pyx 的 rasterio.<name> 字面引用, 并与 requirements-build.txt
+# 的 rasterio==1.4.4 绑定; 升级 rasterio 前必须重新核对。
+RASTERIO_SUBMODULES = [
+    "rasterio._base", "rasterio._env", "rasterio._err", "rasterio._example",
+    "rasterio._features", "rasterio._filepath", "rasterio._fill", "rasterio._io",
+    "rasterio._path", "rasterio._transform", "rasterio._version",
+    "rasterio._vsiopener", "rasterio._warp", "rasterio.control", "rasterio.coords",
+    "rasterio.crs", "rasterio.drivers", "rasterio.dtypes", "rasterio.enums",
+    "rasterio.env", "rasterio.errors", "rasterio.path", "rasterio.profiles",
+    "rasterio.rpc", "rasterio.sample", "rasterio.serde", "rasterio.transform",
+    "rasterio.vrt", "rasterio.windows",
+]
+
 gui = Analysis(
     [ENTRY_GUI],
     pathex=[ROOT],
     binaries=binaries,
     datas=datas,
-    # Cython 扩展在 C 层引用这些子模块 (静态分析看不到), 见 macos spec 的说明
-    hiddenimports=["rasterio._base", "rasterio._env", "rasterio._err", "rasterio._example",
-                   "rasterio._features", "rasterio._filepath", "rasterio._fill",
-                   "rasterio._io", "rasterio._path", "rasterio._transform",
-                   "rasterio._version", "rasterio._vsiopener", "rasterio._warp",
-                   "rasterio.control", "rasterio.coords", "rasterio.crs",
-                   "rasterio.drivers", "rasterio.dtypes", "rasterio.enums",
-                   "rasterio.env", "rasterio.errors", "rasterio.path",
-                   "rasterio.profiles", "rasterio.rpc", "rasterio.sample",
-                   "rasterio.transform", "rasterio.vrt", "rasterio.windows"],
+    hiddenimports=RASTERIO_SUBMODULES,
     excludes=["matplotlib", "pandas", "sklearn", "scipy", "pytest"],
     noarchive=False,
 )
@@ -57,15 +65,7 @@ cli = Analysis(
     pathex=[ROOT],
     binaries=binaries,
     datas=datas,
-    hiddenimports=["rasterio._base", "rasterio._env", "rasterio._err", "rasterio._example",
-                   "rasterio._features", "rasterio._filepath", "rasterio._fill",
-                   "rasterio._io", "rasterio._path", "rasterio._transform",
-                   "rasterio._version", "rasterio._vsiopener", "rasterio._warp",
-                   "rasterio.control", "rasterio.coords", "rasterio.crs",
-                   "rasterio.drivers", "rasterio.dtypes", "rasterio.enums",
-                   "rasterio.env", "rasterio.errors", "rasterio.path",
-                   "rasterio.profiles", "rasterio.rpc", "rasterio.sample",
-                   "rasterio.transform", "rasterio.vrt", "rasterio.windows"],
+    hiddenimports=RASTERIO_SUBMODULES,
     excludes=["matplotlib", "pandas", "sklearn", "scipy", "pytest", "tkinter"],
     noarchive=False,
 )

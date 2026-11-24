@@ -6,6 +6,7 @@
 出现, 源码运行完全正常, 所以必须在打包前就用测试钉住:
 按 PyInstaller 的方式执行每个 spec 声明的入口 (sys.path 含仓库根 + run_name='__main__')。
 """
+import ast
 import re
 import subprocess
 import sys
@@ -47,3 +48,52 @@ def test_entries_survive_frozen_execution(spec):
         r = _run_as_frozen(entry)
         assert r.returncode == 0, f"{spec} 入口 {entry} 冻结后执行失败:\n{r.stderr}"
         assert "relative import" not in r.stderr
+
+
+def _literal_strings(node, named_lists):
+    """取 spec 里 hiddenimports 参数的字符串常量 (支持 Name / List / List + List)"""
+    if isinstance(node, ast.List):
+        return [e.value for e in node.elts
+                if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+    if isinstance(node, ast.Name):
+        return named_lists.get(node.id, [])
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return _literal_strings(node.left, named_lists) + _literal_strings(node.right, named_lists)
+    return []
+
+
+def _hiddenimports_of(spec: Path) -> list[set[str]]:
+    """返回 spec 中每个 Analysis(hiddenimports=...) 的模块名集合"""
+    tree = ast.parse(spec.read_text(encoding="utf-8"))
+    named_lists = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.List):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    named_lists[target.id] = _literal_strings(node.value, named_lists)
+    sets = []
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == "Analysis"):
+            for kw in node.keywords:
+                if kw.arg == "hiddenimports":
+                    sets.append(set(_literal_strings(kw.value, named_lists)))
+    return sets
+
+
+@pytest.mark.parametrize("spec", SPECS)
+def test_spec_hiddenimports_include_rasterio_serde(spec):
+    hidden = _hiddenimports_of(BUILD / spec)
+    assert hidden, f"{spec} 里找不到 Analysis(hiddenimports=...)"
+    for names in hidden:
+        assert "rasterio.serde" in names, (
+            f"{spec} 的 hiddenimports 漏了 rasterio.serde: "
+            "rasterio 1.4.4 的 _base.pyx 在 C 层 import 它, 冻结后必然缺模块"
+        )
+
+
+def test_build_requirements_pin_rasterio():
+    req = (BUILD / "requirements-build.txt").read_text(encoding="utf-8")
+    assert "rasterio==1.4.4" in req, (
+        "hiddenimports 清单与 rasterio 版本绑定, 不要放开版本"
+    )
